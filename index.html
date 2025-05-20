@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Attendance System | NLA</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #e0eafc, #cfdef3);
+      padding: 2rem;
+      text-align: center;
+      color: #333;
+    }
+
+    .container {
+      background: #fff url('https://upload.wikimedia.org/wikipedia/commons/9/99/Lotto-balls.jpg') no-repeat center top;
+      background-size: cover;
+      border-radius: 16px;
+      box-shadow: 0 6px 25px rgba(0,0,0,0.1);
+      max-width: 500px;
+      margin: 2rem auto;
+      padding: 2.5rem;
+      backdrop-filter: blur(4px);
+    }
+
+    h2 {
+      color: #2c3e50;
+      margin-bottom: 1rem;
+    }
+
+    p.subtitle {
+      color: #7f8c8d;
+      margin-bottom: 2rem;
+    }
+
+    input, button, select {
+      padding: 0.8rem;
+      margin: 0.75rem 0;
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52,152,219,0.2);
+    }
+
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      margin-top: 1.5rem;
+      padding: 1rem;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    #status {
+      margin: 1.5rem 0;
+      min-height: 3rem;
+      font-weight: 500;
+    }
+
+    .timestamp {
+      font-size: 0.9rem;
+      color: #95a5a6;
+      margin-top: 1rem;
+    }
+
+    #qr-section {
+      margin-top: 2rem;
+    }
+
+    img.qr-img {
+      width: 200px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>National Lottery Authority</h2>
+    <h2>Smart Attendance System</h2>
+    <p class="subtitle">Enter PIN, select action, and validate your location</p>
+
+    <div>
+      <label for="pin">6-Digit PIN:</label>
+      <input type="text" id="pin" placeholder="Enter your 6-digit PIN" maxlength="6" required />
+    </div>
+
+    <div>
+      <label for="action">Select Action:</label>
+      <select id="action" required>
+        <option value="" disabled selected>Choose an option</option>
+        <option value="Sign In">Sign In</option>
+        <option value="Sign Out">Sign Out</option>
+      </select>
+    </div>
+
+    <button onclick="checkAttendance()">Submit Attendance</button>
+
+    <div id="status"></div>
+    <div class="timestamp" id="timestamp"></div>
+
+    <div id="qr-section">
+      <p>Scan QR Code to open this page</p>
+      <img src="https://your-me-qr-image-url.com/qr.png" alt="QR Code" class="qr-img">
+    </div>
+  </div>
+
+  <script>
+    const authorizedStaff = {
+      "599871": { name: "Rose Dede Adjei", color: "red" },
+      "217067": { name: "Naza Awuku Kweku", color: "blue" },
+      "885738": { name: "Benedicta Nana Adjoa Ofori", color: "green" },
+      "475130": { name: "Mary Arthur", color: "orange" },
+      "645330": { name: "Doris Adu Boatemang", color: "purple" },
+      "557479": { name: "Nii Lamptey", color: "cyan" },
+      "766416": { name: "George Mensah", color: "magenta" },
+      "718443": { name: "Andrews Adjei Ofori", color: "yellow" },
+      "110174": { name: "Samuel Ampofo", color: "brown" },
+      "101618": { name: "Willian Darko Acheampong", color: "#009688" }
+    };
+
+    function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    function checkAttendance() {
+      const pin = document.getElementById("pin").value.trim();
+      const action = document.getElementById("action").value;
+      const user = authorizedStaff[pin];
+      const statusDiv = document.getElementById("status");
+      const timestampDiv = document.getElementById("timestamp");
+
+      statusDiv.innerHTML = '';
+      timestampDiv.innerHTML = '';
+
+      if (!user) {
+        statusDiv.innerHTML = '<p style="color:red;">Invalid PIN. Please try again.</p>';
+        return;
+      }
+
+      if (!action) {
+        statusDiv.innerHTML = '<p style="color:red;">Please select an action.</p>';
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        statusDiv.innerHTML = '<p style="color:red;">Geolocation is not supported by your browser.</p>';
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition((position) => {
+        const { latitude, longitude } = position.coords;
+        const officeLat = 5.556020, officeLong = -0.205592;
+        const distance = getDistanceFromLatLonInKm(latitude, longitude, officeLat, officeLong);
+
+        const now = new Date();
+        const formattedTime = now.toLocaleString('en-GB', {
+          weekday: 'short',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+
+        const hour = now.getHours();
+        let statusNote = '';
+        if (action === "Sign In" && hour >= 8) statusNote = ' (Late)';
+        if (action === "Sign Out" && hour < 17) statusNote = ' (Early Sign Out)';
+
+        if (!isNaN(distance) && distance <= 1.6) {
+          statusDiv.innerHTML = `<p style="color:${user.color}; font-weight:600;">${action} successful for ${user.name}${statusNote}</p>`;
+          timestampDiv.innerHTML = `Recorded at: ${formattedTime}`;
+          submitToGoogleForm(user.name, pin, action + statusNote, formattedTime, latitude, longitude);
+        } else {
+          statusDiv.innerHTML = `<p style="color:orange;">You are ${distance.toFixed(2)} km from office. Must be within 1.6 km.</p>`;
+        }
+      }, () => {
+        statusDiv.innerHTML = '<p style="color:red;">Location access denied. Please enable it to continue.</p>';
+      });
+    }
+
+    function submitToGoogleForm(name, pin, action, timestamp, lat, lng) {
+      const formData = new FormData();
+      formData.append("entry.1234567890", name);
+      formData.append("entry.2345678901", pin);
+      formData.append("entry.3456789012", action);
+      formData.append("entry.4567890123", timestamp);
+      formData.append("entry.5678901234", `${lat},${lng}`);
+
+      fetch("https://docs.google.com/forms/d/e/1FAIpQLScxLzrTEiHWB45nh6P7/formResponse", {
+        method: "POST",
+        mode: "no-cors",
+        body: formData
+      }).then(() => {
+        console.log("Attendance recorded");
+      }).catch((err) => {
+        console.error("Error submitting form", err);
+      });
+    }
+  </script>
+</body>
+</html>
